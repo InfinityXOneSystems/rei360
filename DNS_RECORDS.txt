@@ -1,0 +1,299 @@
+================================================================================
+  REI360 DOMAIN: realestateiq360.com
+  DNS & Domain Configuration Records
+================================================================================
+
+IMPORTANT NOTES:
+1. You need to own/control the domain realestateiq360.com
+2. Update your domain registrar (GoDaddy, Namecheap, Google Domains, etc.)
+3. DNS changes take 24-48 hours to propagate globally
+
+================================================================================
+STEP 1: CHOOSE YOUR DNS PROVIDER
+================================================================================
+
+OPTION A: Google Cloud DNS (Recommended for GCP)
+OPTION B: Existing Registrar DNS (easier if already registered)
+OPTION C: Cloudflare DNS (optional - adds DDoS protection)
+
+================================================================================
+OPTION A: GOOGLE CLOUD DNS SETUP
+================================================================================
+
+Create a managed zone in Google Cloud:
+
+gcloud dns managed-zones create rei360-zone \
+  --dns-name="realestateiq360.com." \
+  --description="REI360 Production Domain" \
+  --project=infinity-x-one-systems
+
+Get the nameservers:
+
+gcloud dns managed-zones describe rei360-zone \
+  --project=infinity-x-one-systems \
+  --format="value(nameServers)"
+
+⬇️  Copy the 4 nameservers output and go to your domain registrar
+    Update the nameservers to point to Google Cloud DNS
+
+Create DNS records (A, AAAA, MX, TXT):
+
+# API/Frontend A Record
+gcloud dns record-sets create realestateiq360.com. \
+  --rrdatas=34.159.1.1 \
+  --ttl=300 \
+  --type=A \
+  --zone=rei360-zone \
+  --project=infinity-x-one-systems
+
+# WWW subdomain
+gcloud dns record-sets create www.realestateiq360.com. \
+  --rrdatas=realestateiq360.com. \
+  --ttl=300 \
+  --type=CNAME \
+  --zone=rei360-zone \
+  --project=infinity-x-one-systems
+
+# API subdomain (optional)
+gcloud dns record-sets create api.realestateiq360.com. \
+  --rrdatas=realestateiq360.com. \
+  --ttl=300 \
+  --type=CNAME \
+  --zone=rei360-zone \
+  --project=infinity-x-one-systems
+
+================================================================================
+OPTION B: REGISTRAR DNS SETUP (Non-GCP)
+================================================================================
+
+If using your existing domain registrar, add these records:
+
+1. A Record (Main Domain)
+   ┌─────────────────────────────────────────────────┐
+   │ Type:  A                                         │
+   │ Name:  @ or (leave blank)                        │
+   │ Value: [Cloud Run IP - get from GCP Console]    │
+   │ TTL:   300 (5 minutes)                          │
+   └─────────────────────────────────────────────────┘
+
+2. CNAME Record (WWW)
+   ┌─────────────────────────────────────────────────┐
+   │ Type:  CNAME                                     │
+   │ Name:  www                                       │
+   │ Value: realestateiq360.com                      │
+   │ TTL:   300                                      │
+   └─────────────────────────────────────────────────┘
+
+3. CNAME Record (API Subdomain - Optional)
+   ┌─────────────────────────────────────────────────┐
+   │ Type:  CNAME                                     │
+   │ Name:  api                                       │
+   │ Value: realestateiq360.com                      │
+   │ TTL:   300                                      │
+   └─────────────────────────────────────────────────┘
+
+4. MX Record (Email - Optional)
+   ┌─────────────────────────────────────────────────┐
+   │ Type:  MX                                        │
+   │ Name:  @ or (leave blank)                        │
+   │ Value: 10 aspmx.l.google.com                    │
+   │ TTL:   3600                                     │
+   └─────────────────────────────────────────────────┘
+
+5. TXT Record (SPF - Optional but recommended)
+   ┌─────────────────────────────────────────────────┐
+   │ Type:  TXT                                       │
+   │ Name:  @ or (leave blank)                        │
+   │ Value: v=spf1 include:_spf.google.com ~all      │
+   │ TTL:   3600                                     │
+   └─────────────────────────────────────────────────┘
+
+================================================================================
+CLOUD RUN SERVICE IP
+================================================================================
+
+After deploying to Cloud Run, get the public IP:
+
+gcloud run services describe rei360-api \
+  --region=us-central1 \
+  --format='value(status.url)' \
+  --project=infinity-x-one-systems
+
+The URL will be: https://rei360-api-xxxxxxxxxx-uc.a.run.app
+
+For the A record IP, check the GCP Load Balancer or use Cloud DNS's
+automatic IP resolution.
+
+================================================================================
+SSL/TLS CERTIFICATE
+================================================================================
+
+✅ Automatic via Google Cloud:
+   - Cloud Run automatically manages SSL certificates
+   - Uses Let's Encrypt
+   - Auto-renewal (no action needed)
+   - Redirects HTTP → HTTPS automatically
+
+Certificate Status:
+gcloud compute ssl-certificates list --project=infinity-x-one-systems
+
+================================================================================
+VERIFICATION
+================================================================================
+
+1. Check DNS Resolution (after 24-48 hours):
+
+   nslookup realestateiq360.com
+
+   or
+
+   Resolve-DnsName -Name realestateiq360.com -Type A
+
+2. Check SSL Certificate:
+
+   openssl s_client -connect realestateiq360.com:443
+
+3. Test API Endpoint:
+
+   curl https://realestateiq360.com/health
+   curl https://realestateiq360.com/api/status
+
+4. Test in Browser:
+
+   https://realestateiq360.com
+   https://www.realestateiq360.com
+
+5. Global DNS Propagation Check:
+
+   https://www.whatsmydns.net/?q=realestateiq360.com
+
+================================================================================
+LOAD BALANCER (Optional - for advanced routing)
+================================================================================
+
+If you need global load balancing:
+
+gcloud compute load-balancers create rei360-global-lb \
+  --global \
+  --project=infinity-x-one-systems
+
+Then update DNS A record to point to the load balancer IP instead.
+
+================================================================================
+CLOUDFLARE (Optional - adds DDoS protection)
+================================================================================
+
+1. Sign up at https://cloudflare.com
+2. Add your domain
+3. Update nameservers at your registrar to Cloudflare's nameservers
+4. Configure Cloudflare DNS records to point to GCP
+5. Enable DDoS protection, caching, and firewall rules
+
+Cloudflare Nameservers (example):
+  - delia.ns.cloudflare.com
+  - leon.ns.cloudflare.com
+
+================================================================================
+DNS RECORD SUMMARY TABLE
+================================================================================
+
+Domain: realestateiq360.com
+Registrar: [Your registrar name]
+Nameserver 1: [NS1]
+Nameserver 2: [NS2]
+Nameserver 3: [NS3]
+Nameserver 4: [NS4]
+
+Record    | Type  | Name              | Value
+----------|-------|-------------------|---------------------
+Primary   | A     | @                 | [Cloud Run IP]
+WWW       | CNAME | www               | realestateiq360.com
+API       | CNAME | api               | realestateiq360.com
+Email     | MX    | @                 | aspmx.l.google.com
+SPF       | TXT   | @                 | v=spf1 include:_spf.google.com ~all
+DKIM      | CNAME | default._domainkey| [from email provider]
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+Problem: Domain not resolving after 48 hours
+
+1. Check nameserver propagation:
+   https://www.whatsmydns.net/?q=realestateiq360.com
+
+2. Verify DNS records are set in registrar:
+   Log in to your registrar account and check all records
+
+3. Clear local DNS cache:
+   ipconfig /flushdns (Windows)
+   sudo systemctl restart systemd-resolved (Linux)
+
+4. Test from command line:
+   nslookup realestateiq360.com
+   Resolve-DnsName -Name realestateiq360.com
+
+Problem: SSL certificate not valid
+
+1. Cloud Run handles this automatically - wait 5-10 minutes
+2. Verify domain is correctly mapped:
+   gcloud run domain-mappings list --region=us-central1
+3. Check certificate status:
+   gcloud compute ssl-certificates list
+
+Problem: Mixed content warnings (HTTP content on HTTPS page)
+
+1. All images/scripts must load from HTTPS
+2. Update frontend to use https:// URLs only
+3. Ensure backend API is served over HTTPS
+
+================================================================================
+PRODUCTION CHECKLIST
+================================================================================
+
+Before going live with realestateiq360.com:
+
+☐ Domain registered and owned
+☐ DNS records created (A, CNAME, MX, TXT)
+☐ Cloud Run service deployed (rei360-api)
+☐ Custom domain mapped in Cloud Run
+☐ SSL certificate active (green lock)
+☐ HTTP redirects to HTTPS
+☐ API endpoints responding (status 200)
+☐ Frontend loads without errors
+☐ Database credentials in Secret Manager
+☐ Monitoring and logging configured
+☐ Firewall rules configured
+☐ DDoS protection enabled (optional)
+☐ Backup and disaster recovery plan in place
+☐ Team trained on deployment process
+☐ Status page monitoring enabled
+
+================================================================================
+NEXT STEPS
+================================================================================
+
+1. Register domain realestateiq360.com (if not already done)
+   - GoDaddy, Namecheap, Google Domains, or your preferred registrar
+
+2. Update DNS settings:
+   - Option A: Use Google Cloud DNS (recommended)
+   - Option B: Use your registrar's DNS
+
+3. Deploy to Cloud Run:
+   pwsh c:\AI\repos\rei360\deploy-rei360-production.ps1 -Environment production
+
+4. Map custom domain:
+   gcloud run domain-mappings create \
+     --service=rei360-api \
+     --domain=realestateiq360.com \
+     --region=us-central1
+
+5. Wait 24-48 hours for DNS propagation
+
+6. Verify at: https://realestateiq360.com
+
+================================================================================
+Last Updated: January 15, 2026
+Status: Ready for configuration
+================================================================================

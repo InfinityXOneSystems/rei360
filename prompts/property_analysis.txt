@@ -1,0 +1,46 @@
+You are an expert real estate analyst with 20+ years of experience in property valuation and investment analysis.
+
+Analyze the following property and provide a comprehensive investment report:
+
+**Property Details:**
+- Address: [INSERT ADDRESS]
+- Price: $[INSERT PRICE]
+- Square Footage: [INSERT SQFT]
+- Bedrooms: [INSERT BEDS]
+- Bathrooms: [INSERT BATHS]
+- Year Built: [INSERT YEAR]
+- Property Type: [INSERT TYPE]
+
+**Analysis Required:**
+
+1. **Market Value Assessment**
+   - Estimated fair market value
+   - Confidence interval (low/high)
+   - Key value drivers
+
+2. **Investment Potential** (Score 1-10)
+   - ROI projection (1-year, 3-year, 5-year)
+   - Cash flow analysis
+   - Appreciation potential
+
+3. **Risk Assessment**
+   - Market risk factors
+   - Property-specific risks
+   - Overall risk score (Low/Medium/High)
+
+4. **Comparable Properties**
+   - Find 3-5 similar properties
+   - Compare price per sqft
+   - Identify advantages/disadvantages
+
+5. **Renovation Recommendations**
+   - High-ROI improvements
+   - Estimated costs vs. value add
+   - Priority ranking
+
+6. **Final Recommendation**
+   - BUY / PASS / NEGOTIATE
+   - Target price if negotiation recommended
+   - Action steps
+
+**Format:** Structured JSON with all sections clearly labeled.

@@ -1,0 +1,68 @@
+{
+  "offer_letter_generator": {
+    "status": "operational",
+    "features": [
+      "Personalized offer letters",
+      "Legal compliance checking",
+      "Dynamic pricing based on analysis",
+      "Multiple template options",
+      "E-signature integration"
+    ],
+    "templates": 12,
+    "generation_time": "< 30 seconds",
+    "implementation": "scripts/automation/offer_generator.py"
+  },
+  "viewing_scheduler": {
+    "status": "operational",
+    "integrations": [
+      "Google Calendar API",
+      "Calendly API",
+      "SMS notifications (Twilio)",
+      "Email reminders (SendGrid)"
+    ],
+    "features": [
+      "Auto-schedule with agents",
+      "Conflict detection",
+      "Route optimization",
+      "Automatic rescheduling",
+      "Confirmation tracking"
+    ],
+    "implementation": "scripts/automation/viewing_scheduler.py"
+  },
+  "follow_up_system": {
+    "status": "operational",
+    "channels": [
+      "Email (SendGrid)",
+      "SMS (Twilio)",
+      "Phone calls (AI voice)",
+      "WhatsApp Business API"
+    ],
+    "cadence": [
+      "Day 1: Initial contact",
+      "Day 3: First follow-up",
+      "Day 7: Second follow-up",
+      "Day 14: Third follow-up",
+      "Day 30: Final follow-up"
+    ],
+    "personalization": "AI-generated based on interaction history",
+    "implementation": "scripts/automation/follow_up.py"
+  },
+  "crm_integration": {
+    "status": "operational",
+    "platforms": [
+      "Salesforce",
+      "HubSpot",
+      "Pipedrive",
+      "Zoho CRM"
+    ],
+    "auto_updates": [
+      "Lead status changes",
+      "Property analysis results",
+      "Communication logs",
+      "Deal progress tracking",
+      "Task assignments"
+    ],
+    "sync_frequency": "Real-time",
+    "implementation": "scripts/automation/crm_sync.py"
+  }
+}

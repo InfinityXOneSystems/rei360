@@ -1,0 +1,36 @@
+{
+  "name": "rei360-monorepo",
+  "version": "1.0.0",
+  "description": "Real Estate IQ 360 - Enterprise flagship system",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev:all": "pnpm -r run dev",
+    "build:all": "pnpm -r run build",
+    "test:all": "pnpm -r run test",
+    "lint:all": "pnpm -r run lint",
+    "type-check": "pnpm -r run type-check",
+    "install-all": "pnpm install",
+    "clean": "pnpm -r exec rm -rf node_modules dist build .next && rm -rf node_modules pnpm-lock.yaml",
+    "docker:build": "pnpm run build:all && ./infrastructure/scripts/build-services.ps1",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f"
+  },
+  "workspaces": [
+    "services/frontend",
+    "services/backend/*",
+    "shared/utils/nodejs"
+  ],
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.0.0",
+    "typescript": "^5.0.0",
+    "eslint": "^8.0.0",
+    "prettier": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  }
+}

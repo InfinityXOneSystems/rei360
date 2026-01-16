@@ -1,0 +1,51 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "🚀 Send to AI Studio",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-File",
+        "${workspaceFolder}/tools/studio_sync.ps1",
+        "-Prompt",
+        "${input:promptName}",
+        "-OpenBrowser"
+      ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "📋 Copy Prompt to Clipboard",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-File",
+        "${workspaceFolder}/tools/studio_sync.ps1",
+        "-Prompt",
+        "${input:promptName}"
+      ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "promptName",
+      "type": "pickString",
+      "description": "Select prompt to send to AI Studio",
+      "options": [
+        "property_analysis",
+        "market_trends",
+        "investment_strategy",
+        "risk_assessment"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,319 @@
+version: '3.9'
+
+services:
+  # ==================== DATABASES ====================
+  postgres-property:
+    image: postgres:15-alpine
+    container_name: rei360-postgres-property
+    environment:
+      POSTGRES_DB: rei360_property
+      POSTGRES_USER: rei360_user
+      POSTGRES_PASSWORD: devpassword
+    volumes:
+      - postgres_property_data:/var/lib/postgresql/data
+      - ./shared/constants/database-schemas.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rei360_user -d rei360_property"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-vector:
+    image: postgres:15-alpine
+    container_name: rei360-postgres-vector
+    environment:
+      POSTGRES_DB: rei360_vectors
+      POSTGRES_USER: rei360_user
+      POSTGRES_PASSWORD: devpassword
+    volumes:
+      - postgres_vector_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rei360_user -d rei360_vectors"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: rei360-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==================== MESSAGE QUEUE ====================
+  pubsub-emulator:
+    image: google/cloud-sdk:emulators
+    container_name: rei360-pubsub-emulator
+    ports:
+      - "8085:8085"
+    command: gcloud beta emulators pubsub start --host-port=0.0.0.0:8085
+    environment:
+      PUBSUB_PROJECT_ID: infinity-x-one-systems
+
+  # ==================== BACKEND SERVICES ====================
+  auth-service:
+    build:
+      context: ./services/backend/auth
+      dockerfile: Dockerfile
+    container_name: rei360-auth
+    ports:
+      - "8001:8000"
+    environment:
+      - PORT=8000
+      - DATABASE_URL=postgresql://rei360_user:devpassword@postgres-property:5432/rei360_property
+      - JWT_SECRET=dev-secret-key-change-in-prod
+      - OAUTH_CLIENT_ID=${OAUTH_CLIENT_ID}
+      - OAUTH_CLIENT_SECRET=${OAUTH_CLIENT_SECRET}
+    depends_on:
+      postgres-property:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  data-ingest:
+    build:
+      context: ./services/backend/data-ingest
+      dockerfile: Dockerfile
+    container_name: rei360-data-ingest
+    ports:
+      - "8002:8000"
+    environment:
+      - PORT=8000
+      - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
+      - GOOGLE_CLOUD_PROJECT=infinity-x-one-systems
+    depends_on:
+      pubsub-emulator:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  imagery-processor:
+    build:
+      context: ./services/backend/imagery-processor
+      dockerfile: Dockerfile
+    container_name: rei360-imagery-processor
+    ports:
+      - "8003:8000"
+    environment:
+      - PORT=8000
+      - DATABASE_URL=postgresql://rei360_user:devpassword@postgres-property:5432/rei360_property
+      - VECTOR_DB_URL=postgresql://rei360_user:devpassword@postgres-vector:5432/rei360_vectors
+      - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
+      - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
+    depends_on:
+      postgres-property:
+        condition: service_healthy
+      postgres-vector:
+        condition: service_healthy
+      pubsub-emulator:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  data-processor:
+    build:
+      context: ./services/backend/data-processor
+      dockerfile: Dockerfile
+    container_name: rei360-data-processor
+    ports:
+      - "8004:8000"
+    environment:
+      - PORT=8000
+      - DATABASE_URL=postgresql://rei360_user:devpassword@postgres-property:5432/rei360_property
+      - VECTOR_DB_URL=postgresql://rei360_user:devpassword@postgres-vector:5432/rei360_vectors
+      - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
+      - GCP_PROJECT_ID=infinity-x-one-systems
+    depends_on:
+      postgres-property:
+        condition: service_healthy
+      postgres-vector:
+        condition: service_healthy
+      pubsub-emulator:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  property-search:
+    build:
+      context: ./services/backend/property-search
+      dockerfile: Dockerfile
+    container_name: rei360-property-search
+    ports:
+      - "8005:8000"
+    environment:
+      - PORT=8000
+      - DATABASE_URL=postgresql://rei360_user:devpassword@postgres-property:5432/rei360_property
+      - VECTOR_DB_URL=postgresql://rei360_user:devpassword@postgres-vector:5432/rei360_vectors
+    depends_on:
+      postgres-property:
+        condition: service_healthy
+      postgres-vector:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  valuation-ai:
+    build:
+      context: ./services/backend/valuation-ai
+      dockerfile: Dockerfile
+    container_name: rei360-valuation-ai
+    ports:
+      - "8006:8000"
+    environment:
+      - PORT=8000
+      - DATABASE_URL=postgresql://rei360_user:devpassword@postgres-property:5432/rei360_property
+      - GCP_PROJECT_ID=infinity-x-one-systems
+      - VERTEX_AI_LOCATION=us-central1
+      - VERTEX_AI_MODEL=gemini-2.0-flash-exp
+    depends_on:
+      postgres-property:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  voice-agent:
+    build:
+      context: ./services/backend/voice-agent
+      dockerfile: Dockerfile
+    container_name: rei360-voice-agent
+    ports:
+      - "8007:8000"
+    environment:
+      - PORT=8000
+      - DATABASE_URL=postgresql://rei360_user:devpassword@postgres-property:5432/rei360_property
+      - GCP_PROJECT_ID=infinity-x-one-systems
+      - DIALOGFLOW_LOCATION=us-central1
+    depends_on:
+      postgres-property:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  crm-sync:
+    build:
+      context: ./services/backend/crm-sync
+      dockerfile: Dockerfile
+    container_name: rei360-crm-sync
+    ports:
+      - "8008:8000"
+    environment:
+      - PORT=8000
+      - DATABASE_URL=postgresql://rei360_user:devpassword@postgres-property:5432/rei360_property
+      - SALESFORCE_CLIENT_ID=${SALESFORCE_CLIENT_ID}
+      - SALESFORCE_CLIENT_SECRET=${SALESFORCE_CLIENT_SECRET}
+      - HUBSPOT_API_KEY=${HUBSPOT_API_KEY}
+      - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
+    depends_on:
+      postgres-property:
+        condition: service_healthy
+      pubsub-emulator:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  calendar-sync:
+    build:
+      context: ./services/backend/calendar-sync
+      dockerfile: Dockerfile
+    container_name: rei360-calendar-sync
+    ports:
+      - "8009:8000"
+    environment:
+      - PORT=8000
+      - DATABASE_URL=postgresql://rei360_user:devpassword@postgres-property:5432/rei360_property
+      - GMAIL_CLIENT_ID=${GMAIL_CLIENT_ID}
+      - GMAIL_CLIENT_SECRET=${GMAIL_CLIENT_SECRET}
+      - GMAIL_REFRESH_TOKEN=${GMAIL_REFRESH_TOKEN}
+    depends_on:
+      postgres-property:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  billing:
+    build:
+      context: ./services/backend/billing
+      dockerfile: Dockerfile
+    container_name: rei360-billing
+    ports:
+      - "8010:8000"
+    environment:
+      - PORT=8000
+      - DATABASE_URL=postgresql://rei360_user:devpassword@postgres-property:5432/rei360_property
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY}
+    depends_on:
+      postgres-property:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==================== FRONTEND ====================
+  frontend:
+    build:
+      context: ./services/frontend
+      dockerfile: Dockerfile
+      target: development
+    container_name: rei360-frontend
+    ports:
+      - "3001:5173"
+    environment:
+      - VITE_API_BASE=http://localhost:8001
+      - VITE_ENVIRONMENT=development
+    volumes:
+      - ./services/frontend/src:/app/src
+      - ./services/frontend/public:/app/public
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5173"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_property_data:
+  postgres_vector_data:
+  redis_data:
+
+networks:
+  default:
+    name: rei360-network

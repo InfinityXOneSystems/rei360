@@ -1,0 +1,6 @@
+packages:
+  - 'services/frontend'
+  - 'services/backend/*'
+  - 'shared/utils/nodejs'
+
+shared-workspace-lockfile: true

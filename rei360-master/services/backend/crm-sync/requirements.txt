@@ -1,0 +1,9 @@
+fastapi==0.104.1
+uvicorn==0.24.0
+google-cloud-pubsub==2.18.4
+salesforce-bulk==2.2.0
+python-hubspot==3.8.1
+pydantic==2.5.0
+python-dotenv==1.0.0
+requests==2.31.0
+pytest==7.4.3

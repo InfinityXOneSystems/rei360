@@ -1,0 +1,12 @@
+{
+  "name": "@infinityxone/real-estate-intelligence",
+  "version": "1.0.0",
+  "description": "Real Estate Intelligence Engine - Property analysis, market trends, investment scoring",
+  "main": "src/index.ts",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/InfinityXOneSystems/real-estate-intelligence.git"
+  },
+  "author": "Infinity X One Systems",
+  "license": "MIT"
+}
