@@ -2,17 +2,17 @@
 <#
 .SYNOPSIS
     Quick sync prompts to AI Studio via clipboard
-    
+
 .EXAMPLE
     .\studio_sync.ps1 -Prompt "property_analysis"
     .\studio_sync.ps1 -Prompt "market_trends" -OpenBrowser
 #>
 
 param(
-    [Parameter(Mandatory=$true)]
+    [Parameter(Mandatory = $true)]
     [string]$Prompt,
-    
-    [Parameter(Mandatory=$false)]
+
+    [Parameter(Mandatory = $false)]
     [switch]$OpenBrowser
 )
 

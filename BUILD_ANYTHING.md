@@ -80,18 +80,18 @@ import asyncio
 
 async def main():
     machine = InventionMachine()
-    
+
     # Generate inventions
     inventions = await machine.generate_invention_batch(
         domain="Real Estate Intelligence",
         count=10
     )
-    
+
     # Auto-validate
     for inv in inventions:
         if inv.auto_buildable and inv.roi_estimate > 20:
             validation = await machine.validate_invention(inv.id)
-            
+
             if validation['recommendation'] == 'PROCEED':
                 # Auto-build it!
                 build_plan = await machine.auto_build(inv.id)
@@ -110,11 +110,11 @@ import asyncio
 
 async def main():
     builder = AutoBuilder()
-    
+
     result = await builder.build_from_description(
         "Build a voice AI agent that schedules property viewings"
     )
-    
+
     print(f"✅ Built in {result.build_time_seconds}s")
     print(f"📁 Files: {len(result.files_created)}")
     print(f"🚀 Next: {result.next_steps}")
@@ -132,12 +132,12 @@ import asyncio
 
 async def main():
     builder = FrontendBuilder()
-    
+
     # Build complete app
     files = await builder.build_full_app(
         "Property search app with filters, map view, and favorites"
     )
-    
+
     # Files automatically created
     print(f"✅ Generated {len(files)} files")
 

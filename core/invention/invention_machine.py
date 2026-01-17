@@ -36,43 +36,43 @@ class Invention:
 
 class InventionMachine:
     """AI-powered invention and innovation engine"""
-    
+
     def __init__(self, gemini_api_key: str = None, project_id: str = None):
         """Initialize the Invention Machine"""
-        
+
         # Setup Gemini
         api_key = gemini_api_key or os.getenv('GEMINI_API_KEY')
         if not api_key:
             raise ValueError("GEMINI_API_KEY required")
-        
+
         genai.configure(api_key=api_key)
         self.model = genai.GenerativeModel('gemini-pro')
-        
+
         # Setup Firestore
         self.db = firestore.Client(project=project_id) if project_id else None
-        
+
         # Invention tracking
         self.inventions: Dict[str, Invention] = {}
-    
-    async def generate_invention(self, 
+
+    async def generate_invention(self,
                                  domain: str,
                                  problem: str = None,
                                  constraints: List[str] = None) -> Invention:
         """Generate a novel invention/innovation"""
-        
+
         prompt = f"""
         You are an innovation engine. Generate a novel, high-impact invention/innovation.
-        
+
         Domain: {domain}
         {f"Problem to Solve: {problem}" if problem else ""}
         {f"Constraints: {', '.join(constraints)}" if constraints else ""}
-        
+
         Generate a specific, actionable invention that:
         1. Solves a real problem or creates new value
         2. Is technically feasible with current tech
         3. Has clear ROI potential
         4. Can be implemented incrementally
-        
+
         Provide response as JSON with:
         {{
             "title": "Short catchy name",
@@ -95,13 +95,13 @@ class InventionMachine:
             "auto_buildable": true|false,
             "build_instructions": "If auto_buildable, provide step-by-step build commands"
         }}
-        
+
         Be creative but practical. Think like a senior engineer + entrepreneur.
         """
-        
+
         response = self.model.generate_content(prompt)
         result = json.loads(response.text)
-        
+
         # Create Invention object
         invention = Invention(
             id=self._generate_id(),
@@ -117,26 +117,26 @@ class InventionMachine:
             status="idea",
             auto_buildable=result.get('auto_buildable', False)
         )
-        
+
         # Store
         self.inventions[invention.id] = invention
         if self.db:
             self.db.collection('inventions').document(invention.id).set(asdict(invention))
-        
+
         return invention
-    
-    async def generate_invention_batch(self, 
+
+    async def generate_invention_batch(self,
                                        domain: str,
                                        count: int = 10,
                                        filter_threshold: float = 0.7) -> List[Invention]:
         """Generate multiple inventions and rank by potential"""
-        
+
         inventions = []
-        
+
         for i in range(count):
             try:
                 invention = await self.generate_invention(domain)
-                
+
                 # Calculate overall score
                 overall_score = (
                     invention.feasibility_score * 0.3 +
@@ -144,36 +144,36 @@ class InventionMachine:
                     (invention.roi_estimate / 100) * 0.2 +
                     invention.confidence * 0.1
                 )
-                
+
                 if overall_score >= filter_threshold:
                     inventions.append(invention)
-            
+
             except Exception as e:
                 print(f"Invention {i+1} failed: {e}")
                 continue
-        
+
         # Sort by overall potential
         inventions.sort(key=lambda x: (
             x.feasibility_score * x.impact_score * x.confidence
         ), reverse=True)
-        
+
         return inventions
-    
+
     async def validate_invention(self, invention_id: str) -> Dict:
         """Deep validation of an invention"""
-        
+
         invention = self.inventions.get(invention_id)
         if not invention:
             raise ValueError(f"Invention {invention_id} not found")
-        
+
         prompt = f"""
         Perform deep technical and business validation:
-        
+
         INVENTION:
         Title: {invention.title}
         Description: {invention.description}
         Category: {invention.category}
-        
+
         VALIDATE:
         1. Technical Feasibility (detailed analysis)
         2. Market Demand (who wants this?)
@@ -181,7 +181,7 @@ class InventionMachine:
         4. Risk Assessment (what could go wrong?)
         5. ROI Validation (is the estimate realistic?)
         6. Implementation Complexity (time/resources)
-        
+
         Provide JSON:
         {{
             "validation_score": 0.0-1.0,
@@ -194,37 +194,37 @@ class InventionMachine:
             "reasons": ["reason1", "reason2"]
         }}
         """
-        
+
         response = self.model.generate_content(prompt)
         validation = json.loads(response.text)
-        
+
         # Update invention status
         if validation['recommendation'] == 'PROCEED':
             invention.status = 'validated'
-        
+
         return validation
-    
+
     async def auto_build(self, invention_id: str) -> Dict:
         """Automatically build an invention if possible"""
-        
+
         invention = self.inventions.get(invention_id)
         if not invention:
             raise ValueError(f"Invention {invention_id} not found")
-        
+
         if not invention.auto_buildable:
             return {
                 "success": False,
                 "reason": "Invention marked as not auto-buildable"
             }
-        
+
         # Generate build plan
         prompt = f"""
         Generate complete build instructions for this invention:
-        
+
         Title: {invention.title}
         Description: {invention.description}
         Implementation Plan: {json.dumps(invention.implementation_plan, indent=2)}
-        
+
         Generate EXACT executable commands/code to build this, including:
         1. File structure (directories and files to create)
         2. Code for each file (full implementation)
@@ -232,7 +232,7 @@ class InventionMachine:
         4. Configuration steps
         5. Testing commands
         6. Deployment commands
-        
+
         Format as JSON:
         {{
             "file_structure": {{
@@ -245,74 +245,74 @@ class InventionMachine:
             "deploy_commands": ["deploy1", "deploy2"],
             "estimated_build_time": "X minutes"
         }}
-        
+
         Be extremely specific and executable.
         """
-        
+
         response = self.model.generate_content(prompt)
         build_plan = json.loads(response.text)
-        
+
         # Store build plan
         if self.db:
             self.db.collection('build_plans').document(invention_id).set(build_plan)
-        
+
         return {
             "success": True,
             "build_plan": build_plan,
             "invention_id": invention_id
         }
-    
+
     def _generate_id(self) -> str:
         """Generate unique invention ID"""
         from uuid import uuid4
         return f"inv_{uuid4().hex[:12]}"
-    
+
     def get_top_inventions(self, limit: int = 10) -> List[Invention]:
         """Get top-ranked inventions"""
-        
+
         inventions = list(self.inventions.values())
         inventions.sort(
             key=lambda x: x.feasibility_score * x.impact_score * x.confidence,
             reverse=True
         )
-        
+
         return inventions[:limit]
-    
+
     async def invention_report(self) -> str:
         """Generate invention summary report"""
-        
+
         total = len(self.inventions)
         by_category = {}
         by_status = {}
         avg_roi = 0
         auto_buildable = 0
-        
+
         for inv in self.inventions.values():
             by_category[inv.category] = by_category.get(inv.category, 0) + 1
             by_status[inv.status] = by_status.get(inv.status, 0) + 1
             avg_roi += inv.roi_estimate
             if inv.auto_buildable:
                 auto_buildable += 1
-        
+
         avg_roi = avg_roi / total if total > 0 else 0
-        
+
         report = f"""
         🧠 INVENTION MACHINE REPORT
         ═══════════════════════════════════════════════
-        
+
         Total Inventions: {total}
         Auto-Buildable: {auto_buildable} ({auto_buildable/total*100:.1f}%)
         Average ROI: {avg_roi:.1f}%
-        
+
         By Category:
         {chr(10).join(f'  • {k}: {v}' for k, v in by_category.items())}
-        
+
         By Status:
         {chr(10).join(f'  • {k}: {v}' for k, v in by_status.items())}
-        
+
         Top 5 Inventions:
         """
-        
+
         for i, inv in enumerate(self.get_top_inventions(5), 1):
             report += f"""
         {i}. {inv.title}
@@ -321,35 +321,35 @@ class InventionMachine:
            Status: {inv.status}
            Auto-Build: {'Yes' if inv.auto_buildable else 'No'}
             """
-        
+
         return report
 
 
 # Quick test
 if __name__ == "__main__":
     import asyncio
-    
+
     async def demo():
         machine = InventionMachine()
-        
+
         print("🧠 Generating inventions for Real Estate AI...")
-        
+
         # Generate inventions
         inventions = await machine.generate_invention_batch(
             domain="Real Estate Intelligence Platform",
             count=5
         )
-        
+
         print(f"\n✅ Generated {len(inventions)} inventions!\n")
-        
+
         for i, inv in enumerate(inventions, 1):
             print(f"{i}. {inv.title}")
             print(f"   {inv.description}")
             print(f"   ROI: {inv.roi_estimate:.1f}% | Impact: {inv.impact_score:.2f}")
             print(f"   Auto-Build: {'✅' if inv.auto_buildable else '❌'}\n")
-        
+
         # Generate report
         report = await machine.invention_report()
         print(report)
-    
+
     asyncio.run(demo())

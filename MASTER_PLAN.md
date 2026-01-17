@@ -239,25 +239,25 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v3
-    
+
     - name: Authenticate to Google Cloud
       uses: google-github-actions/auth@v1
       with:
         credentials_json: ${{ secrets.GCP_SA_KEY }}
-    
+
     - name: Build Docker Images
       run: |
         docker build -t gcr.io/${{ secrets.GCP_PROJECT }}/property-search .
         docker build -t gcr.io/${{ secrets.GCP_PROJECT }}/valuation-ai .
-    
+
     - name: Push to GCR
       run: |
         gcloud auth configure-docker
         docker push gcr.io/${{ secrets.GCP_PROJECT }}/property-search
-    
+
     - name: Deploy to Cloud Run
       run: |
         gcloud run deploy property-search \
@@ -284,14 +284,14 @@ model = genai.GenerativeModel('gemini-pro')
 def analyze_property(property_data):
     prompt = f"""
     Analyze this property and provide comprehensive valuation:
-    
+
     Address: {property_data['address']}
     Square Footage: {property_data['sqft']}
     Bedrooms: {property_data['beds']}
     Bathrooms: {property_data['baths']}
     Year Built: {property_data['year_built']}
     Neighborhood Stats: {property_data['neighborhood_stats']}
-    
+
     Provide:
     1. Estimated market value with confidence interval
     2. Key value drivers (top 5)
@@ -300,10 +300,10 @@ def analyze_property(property_data):
     5. ROI projection (1yr, 3yr, 5yr)
     6. Risk assessment
     7. Actionable recommendations
-    
+
     Return as structured JSON.
     """
-    
+
     response = model.generate_content(prompt)
     return json.loads(response.text)
 ```
@@ -316,12 +316,12 @@ from google.cloud import vision
 
 def analyze_property_images(image_urls):
     client = vision.ImageAnnotatorClient()
-    
+
     results = []
     for url in image_urls:
         image = vision.Image()
         image.source.image_uri = url
-        
+
         # Multi-feature analysis
         response = client.annotate_image({
             'image': image,
@@ -332,14 +332,14 @@ def analyze_property_images(image_urls):
                 {'type': vision.Feature.SAFE_SEARCH_DETECTION}
             ]
         })
-        
+
         results.append({
             'labels': [label.description for label in response.label_annotations],
             'objects': [obj.name for obj in response.localized_object_annotations],
             'colors': response.image_properties_annotation.dominant_colors.colors,
             'quality_score': calculate_image_quality(response)
         })
-    
+
     return results
 ```
 
@@ -351,7 +351,7 @@ def analyze_property_images(image_urls):
 function syncToFirestore() {
   const sheet = SpreadsheetApp.getActiveSheet();
   const data = sheet.getDataRange().getValues();
-  
+
   const url = 'https://us-central1-PROJECT_ID.cloudfunctions.net/syncProperties';
   const options = {
     'method': 'post',
@@ -361,7 +361,7 @@ function syncToFirestore() {
       timestamp: new Date().toISOString()
     })
   };
-  
+
   UrlFetchApp.fetch(url, options);
 }
 
@@ -386,11 +386,11 @@ class VisionCortex:
         while True:
             # Scan new listings
             new_listings = await self.fetch_new_listings()
-            
+
             for listing in new_listings:
                 # Analyze images
                 analysis = await self.analyze_property_images(listing.images)
-                
+
                 # Store intelligence
                 await self.store_intelligence(listing.id, {
                     'structural_analysis': analysis['structure'],
@@ -398,7 +398,7 @@ class VisionCortex:
                     'value_indicators': analysis['value_signals'],
                     'renovation_suggestions': analysis['renovations']
                 })
-            
+
             await asyncio.sleep(300)  # Every 5 minutes
 ```
 
@@ -412,32 +412,32 @@ class ManusCore:
             # 1. ANALYZE
             context = await self.gather_system_context()
             market = await self.analyze_market_conditions()
-            
+
             # 2. RECOMMEND
             opportunities = await self.identify_opportunities(context, market)
             best_actions = await self.rank_by_roi(opportunities)
-            
+
             # 3. ACTION (Auto-execute if confidence > 85%)
             for action in best_actions:
                 if action.confidence > 0.85 and action.risk < 0.3:
                     result = await self.execute_action(action)
                 else:
                     await self.request_human_approval(action)
-            
+
             # 4. RESULTS
             outcomes = await self.measure_outcomes(result)
-            
+
             # 5. SUMMARY
             summary = await self.generate_summary(outcomes)
             await self.notify_stakeholders(summary)
-            
+
             # 6. ANALYSIS (Why?)
             variance = await self.compare_predicted_vs_actual(result, outcomes)
-            
+
             # 7. EVOLVE
             await self.update_prediction_models(variance)
             await self.optimize_strategies(variance)
-            
+
             await asyncio.sleep(3600)  # Hourly
 ```
 
@@ -448,24 +448,24 @@ class ManusCore:
 class MarketSimulator:
     def simulate_property_value(self, property_id, months_ahead=12):
         """Run 10,000 parallel scenarios"""
-        
+
         simulations = np.zeros((10000, months_ahead))
         current_value = self.get_current_value(property_id)
-        
+
         # Historical patterns
         returns = self.calculate_returns()
         volatility = self.calculate_volatility()
         trend = self.extract_trend()
-        
+
         for i in range(10000):
             monthly_returns = np.random.normal(
                 loc=trend,
                 scale=volatility,
                 size=months_ahead
             )
-            
+
             simulations[i] = current_value * np.cumprod(1 + monthly_returns)
-        
+
         return {
             'median': np.median(simulations, axis=0),
             'ci_90': {
@@ -484,32 +484,32 @@ class MarketSimulator:
 class MasterIndexSystem:
     def index_entity(self, entity_type, entity_id, data):
         """Index any entity with auto-relationship discovery"""
-        
+
         # Create node in Neo4j
         with self.neo4j_driver.session() as session:
             session.run(f"""
                 MERGE (n:{entity_type} {{id: $entity_id}})
                 SET n += $properties
             """, entity_id=entity_id, properties=data)
-        
+
         # Store full data in Firestore
         self.firestore_db.collection(entity_type).document(entity_id).set(data)
-        
+
         # Auto-discover relationships
         self.discover_relationships(entity_type, entity_id, data)
-    
+
     def semantic_search(self, query, limit=20):
         """Natural language search across all entities"""
-        
+
         # Generate embedding
         query_embedding = self.generate_embedding(query)
-        
+
         # Search all indices
         results = []
         for index in self.indices.values():
             matches = index.similarity_search(query_embedding, limit)
             results.extend(matches)
-        
+
         # Re-rank by relevance
         return sorted(results, key=lambda x: x['score'], reverse=True)[:limit]
 ```
@@ -519,18 +519,18 @@ class MasterIndexSystem:
 **Track Every Change**:
 ```python
 class DocumentEvolutionSystem:
-    async def track_change(self, doc_id, old_content, new_content, 
+    async def track_change(self, doc_id, old_content, new_content,
                           author, reason):
         """Track and analyze document evolution"""
-        
+
         # Calculate diff
         diff = list(difflib.unified_diff(old_content, new_content))
-        
+
         # Measure quality change
         quality_delta = await self.quality_analyzer.measure_quality_change(
             old_content, new_content
         )
-        
+
         # Create evolution record
         record = EvolutionRecord(
             doc_id=doc_id,
@@ -541,11 +541,11 @@ class DocumentEvolutionSystem:
             diff=''.join(diff),
             quality_delta=quality_delta
         )
-        
+
         # Store and analyze
         await self.store_evolution(record)
         await self.pattern_detector.analyze_pattern(record)
-        
+
         return record
 ```
 
@@ -556,20 +556,20 @@ class DocumentEvolutionSystem:
 class IntelligentTodoSystem:
     async def create_task(self, title, description):
         """Create task with AI analysis"""
-        
+
         task = Task(
             id=generate_uuid(),
             title=title,
             description=description,
             status=TaskStatus.NOT_STARTED
         )
-        
+
         # AI analysis
         analysis = await self.gemini_model.generate_content(f"""
             Analyze this task:
             Title: {title}
             Description: {description}
-            
+
             Provide JSON with:
             - priority: CRITICAL|HIGH|MEDIUM|LOW
             - estimated_duration: minutes
@@ -577,13 +577,13 @@ class IntelligentTodoSystem:
             - confidence_score: 0-1
             - dependencies: []
         """)
-        
+
         task = self.apply_analysis(task, json.loads(analysis.text))
-        
+
         # Auto-execute if confidence > 85%
         if task.auto_executable and task.confidence_score > 0.85:
             await self.auto_execute(task)
-        
+
         return task
 ```
 
@@ -594,29 +594,29 @@ class IntelligentTodoSystem:
 class WorkspaceAutomation:
     async def auto_generate_property_report(self, property_data):
         """Automated property report generation"""
-        
+
         # Create folder structure
         folder_id = self.workspace.drive.create_folder(
             f"Property_{property_data['address']}"
         )
-        
+
         # Generate analysis document
         doc = self.workspace.docs.create_document(
             title=f"Analysis - {property_data['address']}",
             folder_id=folder_id
         )
-        
+
         report_content = self.generate_report_content(property_data)
         self.workspace.docs.insert_text(doc['document_id'], report_content)
-        
+
         # Create financial spreadsheet
         sheet = self.workspace.sheets.create_spreadsheet(
             title=f"Financials - {property_data['address']}",
             sheets=['Summary', 'Cash Flow', 'Comparables', 'ROI']
         )
-        
+
         await self.populate_financial_sheet(sheet['spreadsheet_id'], property_data)
-        
+
         return {'document': doc, 'spreadsheet': sheet}
 ```
 
@@ -635,7 +635,7 @@ terraform {
       version = "~> 5.0"
     }
   }
-  
+
   backend "gcs" {
     bucket = "real-estate-intel-tfstate"
     prefix = "terraform/state"
@@ -656,14 +656,14 @@ resource "google_cloud_run_service" "property_search" {
     spec {
       containers {
         image = "gcr.io/${var.project_id}/property-search:latest"
-        
+
         resources {
           limits = {
             cpu    = "2"
             memory = "2Gi"
           }
         }
-        
+
         env {
           name = "GEMINI_API_KEY"
           value_from {
@@ -675,7 +675,7 @@ resource "google_cloud_run_service" "property_search" {
         }
       }
     }
-    
+
     metadata {
       annotations = {
         "autoscaling.knative.dev/minScale" = "0"
@@ -700,12 +700,12 @@ resource "google_sql_database_instance" "main" {
 
   settings {
     tier = "db-custom-2-7680"
-    
+
     backup_configuration {
       enabled    = true
       start_time = "03:00"
     }
-    
+
     ip_configuration {
       ipv4_enabled = false
       private_network = google_compute_network.private_network.id
@@ -718,7 +718,7 @@ resource "google_storage_bucket" "property_images" {
   name          = "${var.project_id}-property-images"
   location      = "US"
   force_destroy = false
-  
+
   lifecycle_rule {
     condition {
       age = 90
@@ -738,9 +738,9 @@ resource "google_pubsub_topic" "property_updates" {
 resource "google_pubsub_subscription" "property_updates_sub" {
   name  = "property-updates-sub"
   topic = google_pubsub_topic.property_updates.name
-  
+
   ack_deadline_seconds = 20
-  
+
   push_config {
     push_endpoint = google_cloud_run_service.property_search.status[0].url
   }
@@ -751,10 +751,10 @@ resource "google_cloudfunctions_function" "data_processor" {
   name        = "property-data-processor"
   runtime     = "python311"
   entry_point = "process_property_data"
-  
+
   source_archive_bucket = google_storage_bucket.functions.name
   source_archive_object = "function-source.zip"
-  
+
   event_trigger {
     event_type = "google.pubsub.topic.publish"
     resource   = google_pubsub_topic.property_updates.id
@@ -768,7 +768,7 @@ resource "google_compute_global_address" "default" {
 
 resource "google_compute_backend_service" "default" {
   name = "rei360-backend"
-  
+
   backend {
     group = google_compute_region_network_endpoint_group.cloudrun_neg.id
   }
@@ -805,10 +805,10 @@ resource "google_project_iam_member" "cloudrun_firestore" {
 param(
     [Parameter(Mandatory=$true)]
     [string]$ProjectId,
-    
+
     [Parameter(Mandatory=$false)]
     [string]$Environment = "production",
-    
+
     [Parameter(Mandatory=$false)]
     [string]$Region = "us-central1"
 )
@@ -840,7 +840,7 @@ foreach ($service in $services) {
     Write-Host "  Building $service..." -ForegroundColor Gray
     docker build -t "gcr.io/$ProjectId/$service:latest" `
         -f "services/$service/Dockerfile" .
-    
+
     docker push "gcr.io/$ProjectId/$service:latest"
 }
 
@@ -885,7 +885,7 @@ $secrets = @{
 
 foreach ($secret in $secrets.GetEnumerator()) {
     echo $secret.Value | gcloud secrets create $secret.Key --data-file=-
-    
+
     gcloud secrets add-iam-policy-binding $secret.Key `
         --member="serviceAccount:cloudrun-sa@$ProjectId.iam.gserviceaccount.com" `
         --role="roles/secretmanager.secretAccessor"
@@ -999,7 +999,7 @@ Write-Host "🔍 Logs: https://console.cloud.google.com/logs?project=$ProjectId"
 ```python
 async def generate_daily_system_report():
     """Generate and email daily system report"""
-    
+
     # Gather metrics
     metrics = {
         'properties_analyzed': await get_properties_analyzed_count(),
@@ -1009,27 +1009,27 @@ async def generate_daily_system_report():
         'tasks_completed': await get_tasks_completed(),
         'revenue': await calculate_daily_revenue()
     }
-    
+
     # Create Google Sheet dashboard
     sheet = workspace.sheets.create_dashboard(
         title=f"Daily Report - {datetime.utcnow().strftime('%Y-%m-%d')}",
         data=metrics
     )
-    
+
     # Create Google Doc summary
     doc = workspace.docs.create_report(
         title=f"System Report - {datetime.utcnow().strftime('%Y-%m-%d')}",
         data=metrics,
         template="executive"
     )
-    
+
     # Send email to stakeholders
     workspace.gmail.send_report(
         to="team@example.com",
         report_title="Daily System Report",
         report_data=metrics
     )
-    
+
     return {'sheet': sheet, 'doc': doc}
 ```
 
